@@ -1,0 +1,21 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="numpy.exp" />
+          <option value="numpy.array" />
+          <option value="numpy.random.seed" />
+          <option value="numpy.dot" />
+          <option value="numpy.abs" />
+          <option value="numpy.sqrt" />
+          <option value="numpy.zeros" />
+          <option value="numpy.random.randn" />
+          <option value="numpy.square" />
+          <option value="numpy.where" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
