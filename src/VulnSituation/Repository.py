@@ -186,20 +186,19 @@ def requests_get_text(url, **kwarg):
 
 
 def requests_get(url, try_times=5, sleep_time=10, **kwarg):
-    try_times_count = try_times
-    while try_times_count > 0:
+    while try_times > 0:
         try:
             response = requests.get(url, **kwarg)
             response.raise_for_status()
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError, ssl.SSLError,
                 requests.exceptions.HTTPError, requests.exceptions.InvalidSchema,
-                requests.exceptions.MissingSchema):
-            try_times_count -= 1
+                requests.exceptions.MissingSchema) as e:
+            try_times -= 1
             time.sleep(sleep_time)
         else:
             break
     else:
-        # print('\r\033[1;31mFail(' + str(try_times) + " Times):" + url + '\033[0m')
+        print("\r\033[1;31mFail:" + url + '\033[0m')
         return None
     return response
 
@@ -437,7 +436,7 @@ def is_zero(string):
 
 def get_subversion_number(version_number):
     version_number = version_number.strip().replace(' ', '')
-    if not is_version_number(version_number) or version_number is '':
+    if not is_version_number(version_number) or version_number == '':
         return None
     if re.match(r'\d+$', version_number):
         return ''
@@ -451,12 +450,12 @@ def version_number_compare(version_number1, version_number2):
     subversion_number1 = version_number1.strip().replace(' ', '')
     subversion_number2 = version_number2.strip().replace(' ', '')
     while True:
-        if (subversion_number1 is '' or is_zero(subversion_number1)) and \
-                (subversion_number2 is '' or is_zero(subversion_number2)):
+        if (subversion_number1 == '' or is_zero(subversion_number1)) and \
+                (subversion_number2 == '' or is_zero(subversion_number2)):
             return 0
-        elif subversion_number1 is '' or is_zero(subversion_number1):
+        elif subversion_number1 == '' or is_zero(subversion_number1):
             return -1
-        elif subversion_number2 is '' or is_zero(subversion_number2):
+        elif subversion_number2 == '' or is_zero(subversion_number2):
             return 1
         x1 = int(re.match(r'\d+', subversion_number1).group())
         x2 = int(re.match(r'\d+', subversion_number2).group())
@@ -751,7 +750,7 @@ def get_dict_value(dictionary, key):
 
 def get_description_in_baidubaike(key_word):
     description = ''
-    if key_word is '':
+    if key_word == '':
         print("\033[1;31mKey word should not be empty")
         return description
     key_word = padding(key_word, '%20')
@@ -768,10 +767,12 @@ def get_description_in_baidubaike(key_word):
 
 def get_cve_id_list(url):
     cve_id_list = []
-    content = requests_get_content(url, timeout=10, headers={'User-Agent': random.choice(user_agent_list)})
-    if content:
-        soup = bs4.BeautifulSoup(content, 'lxml')
-        for tag_a in soup.select('div#row table[data-testid=vuln-results-table] tbody tr th strong a'):
+    response = requests_get(url, timeout=10, headers={'User-Agent': random.choice(user_agent_list)})
+    if response:
+        content = response.content
+        response.close()
+        bs = bs4.BeautifulSoup(content, 'lxml')
+        for tag_a in bs.select('div#row table[data-testid=vuln-results-table] tbody tr th strong a'):
             cve_id_list.append(tag_a.get_text().strip())
     return cve_id_list
 
@@ -800,18 +801,18 @@ def clean_empty_directory(root_path):
             os.rmdir(file_path)
 
 
-def get_reference_dict_list(soup):
-    reference_dict_list = []
-    for tag_tr in soup.select('table[data-testid=vuln-hyperlinks-table] tbody tr'):
-        reference_dict = {}
+def get_references(bs):
+    references = []
+    for tag_tr in bs.select('table[data-testid=vuln-hyperlinks-table] tbody tr'):
+        reference = {}
         for tag_td in tag_tr.select('td'):
-            tag_td_text = tag_td.get_text().strip()
             if re.match(r'vuln-hyperlinks-link-', tag_td['data-testid'], re.I):
-                reference_dict.update({'Hyperlink': tag_td_text})
-            elif re.match(r'vuln-hyperlinks-restype-', tag_td['data-testid'], re.I):
-                reference_dict.update({'Resource': tag_td_text})
-        reference_dict_list.append(reference_dict)
-    return reference_dict_list
+                reference.update({'Hyperlink': tag_td.get_text().strip()})
+            elif re.match(r'vuln-hyperlinks-resType-', tag_td['data-testid'], re.I):
+                tag_td_txt = tag_td.get_text().replace(u'\xa0', u'').strip()
+                reference.update({'Resource': ','.join([x for x in re.split('[\r\n\t]', tag_td_txt) if x != ''])})
+        references.append(reference)
+    return references
 
 
 def get_all_cwe_id_list():
